@@ -1,4 +1,6 @@
----
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: MIT-0
+
 AWSTemplateFormatVersion: '2010-09-09'
 Parameters:
   Scope:
@@ -15,8 +17,9 @@ Parameters:
     Type: String
     Description: Enter Rate Based Rule name
   CustomBlockPeriod:
-    Type: String
-    Description: Enter custom block period for blocking the IP addresses in minutes
+    Type: Number
+    Description: Enter custom block period for blocking the IP addresses in minutes. Minimum is 06 minutes
+    MinValue: 6
 
 Resources:
   CustomRBRLogBucket:
@@ -286,12 +289,31 @@ Resources:
               utc_now_timestamp_str = utc_now_timestamp.strftime(
                   "%Y-%m-%d %H:%M:%S %Z%z")
           
-              # Iterate over the managed IPs in the RBR list and set current time
+              # Iterate over the managed IPs in the RBR list
               for managed_ip in rbr_managed_ip_list:
-                  custom_managed_ip_config[managed_ip] = utc_now_timestamp_str
+                  # If the IP is already in the custom IP config
+                  if managed_ip in custom_managed_ip_config.keys():
+                      # Get the timestamp when the IP was blocked in UTC format
+                      utc_blocked_at = datetime.datetime.strptime(
+                          custom_managed_ip_config[managed_ip],
+                          "%Y-%m-%d %H:%M:%S %Z%z").astimezone(
+                          datetime.timezone.utc)
+                      # Calculate the difference in minutes between now and when the IP
+                      # was blocked
+                      total_diff_min = ((utc_now_timestamp - utc_blocked_at)
+                                        .total_seconds()) / 60
+                                        
+                      # If the difference is greater than block period, update the timestamp
+                      if round(total_diff_min) >= int(os.getenv('CUSTOM_BLOCK_PERIOD')):
+                          custom_managed_ip_config[managed_ip] = utc_now_timestamp_str
+                  # If the IP is not in the custom IP config, add it with the current
+                  # timestamp
+                  else:
+                      custom_managed_ip_config[managed_ip] = utc_now_timestamp_str
           
               # Create a new dictionary to store the latest blocked IPs
               latest_ip_blocked_list = {}
+              
               # Iterate over the custom IP config
               for blocked_ip, blocked_at_str in custom_managed_ip_config.items():
                   # Get the timestamp when the IP was blocked in UTC format
@@ -302,13 +324,11 @@ Resources:
                   # was blocked
                   total_diff_min = ((utc_now_timestamp - utc_blocked_at)
                                     .total_seconds()) / 60
-                  # If the difference is less than or equal to the custom block period-5
-                  # which is default block period of RBR 
+                  # If the difference is less than the custom block period
                   #then add it to the latest blocked IPs list
-                  if total_diff_min < float(os.getenv('CUSTOM_BLOCK_PERIOD'))-5:
+                  if round(total_diff_min) < int(os.getenv('CUSTOM_BLOCK_PERIOD')):
                       latest_ip_blocked_list[blocked_ip] = blocked_at_str
-          
-              # Return the latest blocked IPs list
+  
               return latest_ip_blocked_list
           
           
