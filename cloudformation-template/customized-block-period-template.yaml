@@ -469,7 +469,7 @@ Resources:
                 Action: "wafv2:GetRateBasedStatementManagedKeys"
                 Resource: !Sub
                   - 'arn:${AWS::Partition}:wafv2:${AWS::Region}:${AWS::AccountId}:${WebACLSope}/webacl/${WebACLName}/${WebACLId}'
-                  - WebACLSope: !If [IsRegional, "regional", "cloudfront"]
+                  - WebACLSope: !If [IsRegional, "regional", "global"]
 
 
   EventBridgeRule:

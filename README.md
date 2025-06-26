@@ -49,7 +49,7 @@ curl -s -o /dev/null -w "%{http_code}\n" http://example.com
 
 2. Make sure that the rate-based rule and the custom rule doesn't have a custom response code set, as the validation script expects a 403 status code on getting blocked by AWS WAF.
 
-3. Set the rate-based rule’s threshold limit to around 150 for using this script.
+3. Set the rate-based rule’s threshold limit to around 150 requests per 5 minutes for using this script.
 
 To execute this script, use the following commands from a Linux terminal. In the second command below, replace the given URL with your test URL:
 ```
